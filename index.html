@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>UTH Traffic & Map – Cộng đồng sinh viên né kẹt xe</title>
+<!-- Leaflet CSS cho Bản đồ tương tác -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--blue:#1769aa;--navy:#123b63;--green:#21a179;--bg:#f3f7fb;--muted:#64748b}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#18324b;touch-action:manipulation;}
+
+/* Header & Navigation tối ưu cho cảm ứng điện thoại */
+header{background:linear-gradient(120deg,#12558e,#2185c5);color:white;padding:14px 16px;position:sticky;top:0;z-index:2000;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.top{max-width:1120px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-size:20px;font-weight:800;letter-spacing:.4px}.logo span{color:#a8f0d4}
+nav{display:flex;gap:6px;flex-wrap:wrap;width:100%;justify-content:space-between;margin-top:4px}
+@media(min-width:640px){nav{width:auto;margin-top:0}}
+
+button{cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-family:inherit}
+nav button{border:0;background:rgba(255,255,255,0.12);color:white;padding:11px 12px;border-radius:10px;font-weight:700;font-size:13px;flex:1;text-align:center;min-height:44px;transition:background 0.15s}
+nav button.active{background:white;color:var(--navy);box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+nav button:active{transform:scale(0.97)}
+
+main{max-width:1120px;margin:20px auto;padding:0 14px}
+.page{display:none}.page.active{display:block}
+.hero{background:white;border-radius:16px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:18px;box-shadow:0 4px 20px #123b630a}
+h1{font-size:clamp(22px,5vw,32px);margin:0 0 10px;color:var(--navy)}
+.hero p{color:var(--muted);line-height:1.5;max-width:600px;margin:0 0 18px;font-size:14px}
+
+.primary{background:var(--blue);color:white;border:0;padding:13px 18px;border-radius:10px;font-weight:700;font-size:14px;min-height:46px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.primary:active{opacity:0.85;transform:scale(0.98)}
+.secondary{background:#e9f3fb;color:var(--blue);border:0;padding:11px 14px;border-radius:10px;font-weight:700;font-size:13px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.secondary:active{background:#d7eaf9;transform:scale(0.98)}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.stat,.panel,.post{background:white;border-radius:14px;padding:16px;box-shadow:0 4px 16px #123b630c}
+.stat small{color:var(--muted);font-size:12px}.stat strong{display:block;font-size:20px;margin-top:4px;color:var(--navy)}
+.layout{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+.panel h2{margin:0 0 12px;font-size:17px;color:var(--navy)}
+.road{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #edf1f5;font-size:14px}
+.road:last-child{border:0}
+.tag{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.green{background:#e2f7ee;color:#16805d}
+.yellow{background:#fff4d5;color:#a66b00}
+.red{background:#ffe5e5;color:#c33}
+
+.alert-banner{background:#fff8eb;border-left:4px solid #f59e0b;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:13px;color:#78350f;line-height:1.5}
+.alert-banner b{color:#b45309}
+
+.posts{display:grid;gap:12px}
+.posthead{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.post p{line-height:1.5;color:#4b6073;margin:8px 0;font-size:14px}
+.meta{font-size:12px;color:#8291a0}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.actions button{border:0;background:#edf5fb;color:var(--blue);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;min-height:42px}
+.actions button:active{background:#d8eaf8}
+
+form{display:grid;gap:14px}
+label{font-weight:700;font-size:14px;color:var(--navy)}
+input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;font-family:inherit;background:white}
+textarea{min-height:90px;resize:vertical}
+
+/* Bản đồ & Thanh công cụ tối ưu mobile */
+.map-wrapper{position:relative;border-radius:12px;overflow:hidden;border:1px solid #d8e5e9}
+#realMap{height:460px;width:100%;z-index:1;background:#111}
+.map-toolbar{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;background:#f8fafc;padding:12px;border-radius:12px;border:1px solid #e2e8f0}
+@media(min-width:768px){.map-toolbar{flex-direction:row;justify-content:space-between;align-items:center}}
+
+.filter-group{display:flex;gap:6px;flex-wrap:wrap}
+.filter-btn{border:1px solid #cbd5e1;background:white;color:#334155;padding:9px 12px;border-radius:20px;font-size:12px;font-weight:700;min-height:40px;flex:1;white-space:nowrap}
+.filter-btn.active{background:var(--navy);color:white;border-color:var(--navy)}
+.map-actions{display:flex;gap:8px}
+.map-actions button{flex:1}
+
+.map-legend{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:500;font-size:11px;line-height:1.6;pointer-events:none}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+#pickerMap{height:260px;width:100%;border-radius:10px;border:1px solid #cbd5e1;margin-top:6px;z-index:1}
+
+footer{text-align:center;color:#8190a0;padding:24px 16px;font-size:12px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#123b63;color:white;padding:12px 20px;border-radius:10px;display:none;box-shadow:0 4px 15px rgba(0,0,0,0.25);z-index:3000;font-size:14px;text-align:center;width:90%;max-width:360px}
+
+@media(max-width:768px){
+  .grid,.layout{grid-template-columns:1fr}
+  .hero{flex-direction:column;align-items:flex-start}
+  #realMap{height:380px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top">
+    <div class="logo">🚦 UTH <span>TRAFFIC & MAP</span></div>
+    <nav id="mainNav">
+      <button type="button" class="active" data-page="home">Trang chủ</button>
+      <button type="button" data-page="map">Bản đồ</button>
+      <button type="button" data-page="forum">Diễn đàn</button>
+      <button type="button" data-page="report">Báo cáo</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- TRANG CHỦ -->
+  <section id="home" class="page active">
+    <div class="alert-banner">
+      <b>⚠️ Cảnh báo khu vực cổng trường (Khung giờ tan tầm 16h30 - 18h00):</b><br>
+      Lưu lượng xe máy ra vào cổng chính số 2 Võ Oanh và ngã ba Võ Oanh - D3 tăng đột biến. Sinh viên chú ý giảm tốc độ, xếp hàng vào làn gửi xe và không dừng đỗ dưới lòng đường gây ùn ứ cục bộ.
+    </div>
+
+    <div class="hero">
+      <div>
+        <h1>Cùng nhau chia sẻ<br>– Né kẹt xe thông minh!</h1>
+        <p>Hệ thống bản đồ vệ tinh kết hợp diễn đàn giúp sinh viên và giảng viên UTH cập nhật điểm nóng giao thông khu vực Bình Thạnh & quanh cổng trường theo thời gian thực.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;width:100%">
+          <button type="button" class="primary" data-nav="map" style="flex:1">🛰️ Mở bản đồ vệ tinh</button>
+          <button type="button" class="secondary" data-nav="report" style="flex:1">＋ Gửi báo cáo</button>
+        </div>
+      </div>
+      <div style="font-size:56px">🛵</div>
+    </div>
+    
+    <div class="grid">
+      <div class="stat"><small>Báo cáo hôm nay</small><strong id="postCount">08</strong></div>
+      <div class="stat"><small>Khu vực giám sát</small><strong>Bình Thạnh</strong></div>
+      <div class="stat"><small>Cảnh báo quanh trường</small><strong style="color:#d97706">04 điểm nóng</strong></div>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <h2>🚨 Cảnh báo gần trường & Cổng trường UTH</h2>
+        <div class="road"><span>Cổng chính UTH (Số 2 Võ Oanh) – Giờ tan ca</span><span class="tag red">Ùn ứ cục bộ</span></div>
+        <div class="road"><span>Ngã ba Võ Oanh – Đường D3 (Nguyễn Gia Trí)</span><span class="tag yellow">Đông phương tiện</span></div>
+        <div class="road"><span>Nút giao Võ Oanh – Điện Biên Phủ (Hướng cầu Sài Gòn)</span><span class="tag red">Ùn tắc</span></div>
+        <div class="road"><span>Đường D5 (Đoạn nối ra Xô Viết Nghệ Tĩnh)</span><span class="tag yellow">Di chuyển chậm</span></div>
+        <div class="road"><span>Lối ra cổng sau / Hẻm 69 Võ Oanh</span><span class="tag green">Thông thoáng</span></div>
+        <div class="meta" style="margin-top:12px">* Cập nhật liên tục từ sinh viên UTH ra vào các ca học.</div>
+      </div>
+      <div class="panel">
+        <h2>💡 Lưu ý an toàn quanh trường</h2>
+        <p class="meta"><b>1. Cổng chính Võ Oanh:</b> Tuyệt đối không đi ngược chiều đoạn từ ngã ba D3 vào cổng trường để tránh va chạm và bị xử phạt.</p>
+        <p class="meta"><b>2. Giờ vào lớp (6h45 & 12h30):</b> Xuất phát sớm hơn 10-15 phút vì khu vực gửi xe và đường D3 thường xuyên quá tải.</p>
+        <p class="meta"><b>3. Trời mưa / Triều cường:</b> Đoạn trũng gần D5 và Ung Văn Khiêm dễ ngập nhẹ, nên đi vòng hướng Điện Biên Phủ.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BẢN ĐỒ VỆ TINH -->
+  <section id="map" class="page">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <h2 style="margin:0">🛰️ Bản đồ vệ tinh Bình Thạnh & Quanh UTH</h2>
+        <button type="button" class="primary" data-nav="report" style="padding:10px 14px;font-size:13px;min-height:40px">＋ Ghim điểm mới</button>
+      </div>
+      
+      <!-- Thanh công cụ lọc và điều hướng bản đồ -->
+      <div class="map-toolbar">
+        <div class="filter-group">
+          <button type="button" class="filter-btn active" data-filter="ALL">Tất cả (08)</button>
+          <button type="button" class="filter-btn" data-filter="Ùn tắc">🔴 Ùn tắc</button>
+          <button type="button" class="filter-btn" data-filter="Đông phương tiện">🟡 Đông xe</button>
+          <button type="button" class="filter-btn" data-filter="Thông thoáng">🟢 Thoáng</button>
+        </div>
+        <div class="map-actions">
+          <button type="button" class="secondary" id="btnFocusUTH">🏫 Cổng UTH</button>
+          <button type="button" class="secondary" id="btnLocateUser">📍 Vị trí tôi</button>
+        </div>
+      </div>
+
+      <div class="map-wrapper">
+        <div id="realMap"></div>
+        <div class="map-legend">
+          <div><b>Chú thích:</b></div>
+          <div><span class="legend-dot" style="background:#d84b4b"></span>Ùn tắc / Cảnh báo đỏ</div>
+          <div><span class="legend-dot" style="background:#e7a629"></span>Đông xe / Chú ý</div>
+          <div><span class="legend-dot" style="background:#20a477"></span>Thông thoáng</div>
+        </div>
+      </div>
+      <div class="meta" style="margin-top:10px">💡 Chạm vào các biểu tượng màu quanh khu vực trường UTH trên bản đồ để xem chi tiết cảnh báo.</div>
+    </div>
+  </section>
+
+  <!-- DIỄN ĐÀN -->
+  <section id="forum" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px">
+      <h2 style="margin:0">💬 Cập nhật cộng đồng & Cảnh báo</h2>
+      <button type="button" class="primary" data-nav="report" style="padding:10px 14px;font-size:13px;min-height:40px">＋ Tạo bài mới</button>
+    </div>
+    <div class="posts" id="postsContainer"></div>
+  </section>
+
+  <!-- GỬI BÁO CÁO -->
+  <section id="report" class="page">
+    <div class="panel" style="max-width: 650px; margin: auto;">
+      <h2>📍 Đóng góp thông tin giao thông</h2>
+      <p class="meta">Chia sẻ của bạn sẽ được tự động hiển thị lên bản đồ và diễn đàn.</p>
+      <form id="trafficForm">
+        <div>
+          <label for="inpRoute">Tên tuyến đường / Khu vực</label>
+          <input id="inpRoute" required placeholder="Ví dụ: Cổng chính Võ Oanh, Ngã ba D3...">
+        </div>
+        <div>
+          <label for="inpStatus">Mức độ giao thông</label>
+          <select id="inpStatus">
+            <option value="Thông thoáng">🟢 Thông thoáng (Xanh)</option>
+            <option value="Đông phương tiện">🟡 Đông phương tiện (Vàng)</option>
+            <option value="Ùn tắc">🔴 Ùn tắc nghiêm trọng (Đỏ)</option>
+          </select>
+        </div>
+        <div>
+          <label>Chạm vào bản đồ bên dưới để chọn vị trí:</label>
+          <div id="pickerMap"></div>
+          <input type="hidden" id="inpLat" value="10.80472">
+          <input type="hidden" id="inpLng" value="106.71639">
+          <div class="meta" id="coordsDisplay" style="margin-top:6px;color:var(--blue);font-weight:bold">Tọa độ: 10.80472, 106.71639 (Mặc định: Cổng UTH)</div>
+        </div>
+        <div>
+          <label for="inpDetail">Chi tiết tình hình & Mẹo di chuyển</label>
+          <textarea id="inpDetail" required placeholder="Mô tả tình trạng kẹt xe, ngập nước hoặc hướng đi thay thế..."></textarea>
+        </div>
+        <button class="primary" type="submit" style="width:100%">Gửi báo cáo ngay</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>UTH TRAFFIC & MAP · Nền tảng hỗ trợ sinh viên giao thông thông minh</footer>
+<div class="toast" id="toastMsg">Thành công!</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const uthCenter = [10.80472, 106.71639];
+
+let postsData = [
+  { route: "Đường Xô Viết Nghệ Tĩnh", status: "Ùn tắc", detail: "Di chuyển rất chậm đoạn gần cầu Thị Nghè, mọi người chú ý.", time: "7:15 sáng", author: "Minh Quân", coords: [10.7990, 106.7250], liked: false },
+  { route: "Đường Đinh Bộ Lĩnh", status: "Đông phương tiện", detail: "Lượng xe tăng cao hướng bến xe miền Đông cũ.", time: "7:30 sáng", author: "Thanh Hằng", coords: [10.8112, 106.7048], liked: false },
+  { route: "Ngã tư Hàng Xanh", status: "Ùn tắc", detail: "Kẹt xe kéo dài từ Điện Biên Phủ qua Xô Viết Nghệ Tĩnh.", time: "8:10 sáng", author: "Hoàng Yến", coords: [10.8012, 106.7115], liked: false },
+  { route: "Hẻm 69 Võ Oanh (Lối né kẹt xe)", status: "Thông thoáng", detail: "Hướng đi tắt ra đường D5 và Ung Văn Khiêm hiện rất thông thoáng, ít xe.", time: "16:15 chiều", author: "Tuấn Kiệt", coords: [10.8056, 106.7175], liked: false },
+  { route: "Đường D5 (Đoạn giao Võ Oanh)", status: "Đông phương tiện", detail: "Nhiều xe tải nhỏ giao hàng và xe máy sinh viên tan học, chú ý quan sát tại góc cua.", time: "16:20 chiều", author: "Lan Anh", coords: [10.8062, 106.7145], liked: false },
+  { route: "Nút giao Võ Oanh – Điện Biên Phủ", status: "Ùn tắc", detail: "Cảnh báo kẹt cứng dòng xe đổ ra chân cầu Sài Gòn. Nên đi vòng hướng Ung Văn Khiêm.", time: "16:25 chiều", author: "Quốc Bảo", coords: [10.8019, 106.7186], liked: false },
+  { route: "Ngã ba Võ Oanh – Đường D3 (Nguyễn Gia Trí)", status: "Đông phương tiện", detail: "Cảnh báo xung đột giao thông giờ cao điểm, xe từ D3 rẽ trái vào Võ Oanh rất đông, dễ va quẹt.", time: "16:28 chiều", author: "Minh Thư", coords: [10.8035, 106.7155], liked: false },
+  { route: "Cổng chính UTH (Số 2 Võ Oanh)", status: "Ùn tắc", detail: "CẢNH BÁO CỔNG TRƯỜNG: Sinh viên ra vào bãi giữ xe rất đông, lòng đường Võ Oanh trước cổng bị thu hẹp. Đề nghị đi chậm, không dừng đỗ dưới lòng đường.", time: "16:30 chiều", author: "Ban Quản Trị UTH", coords: [10.80472, 106.71639], liked: true }
+];
+
+let currentFilter = 'ALL';
+let map, markersLayer, userLocationMarker;
+let pickerMap, pickerMarker;
+
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#mainNav button').forEach(b => b.classList.remove('active'));
+  
+  const targetPage = document.getElementById(pageId);
+  if (targetPage) targetPage.classList.add('active');
+  
+  const navBtn = document.querySelector(`#mainNav button[data-page="${pageId}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  if (pageId === 'forum') renderPosts();
+  if (pageId === 'map' && map) {
+    setTimeout(() => { map.invalidateSize(); }, 150);
+  }
+  if (pageId === 'report' && pickerMap) {
+    setTimeout(() => { pickerMap.invalidateSize(); }, 150);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('click', function(e) {
+  const navBtn = e.target.closest('#mainNav button[data-page]');
+  if (navBtn) {
+    e.preventDefault();
+    showPage(navBtn.getAttribute('data-page'));
+    return;
+  }
+
+  const subNavBtn = e.target.closest('button[data-nav]');
+  if (subNavBtn) {
+    e.preventDefault();
+    showPage(subNavBtn.getAttribute('data-nav'));
+    return;
+  }
+
+  const filterBtn = e.target.closest('.filter-btn[data-filter]');
+  if (filterBtn) {
+    e.preventDefault();
+    currentFilter = filterBtn.getAttribute('data-filter');
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    filterBtn.classList.add('active');
+    updateMapMarkers();
+    return;
+  }
+
+  const likeBtn = e.target.closest('button[data-like-idx]');
+  if (likeBtn) {
+    e.preventDefault();
+    const idx = parseInt(likeBtn.getAttribute('data-like-idx'), 10);
+    if (!isNaN(idx) && postsData[idx]) {
+      postsData[idx].liked = !postsData[idx].liked;
+      renderPosts();
+    }
+    return;
+  }
+
+  const viewMapBtn = e.target.closest('button[data-view-lat]');
+  if (viewMapBtn) {
+    e.preventDefault();
+    const lat = parseFloat(viewMapBtn.getAttribute('data-view-lat'));
+    const lng = parseFloat(viewMapBtn.getAttribute('data-view-lng'));
+    showPage('map');
+    setTimeout(() => {
+      if (map) map.flyTo([lat, lng], 17);
+    }, 200);
+    return;
+  }
+});
+
+document.getElementById('btnFocusUTH').addEventListener('click', function() {
+  if (map) map.flyTo(uthCenter, 17);
+});
+
+document.getElementById('btnLocateUser').addEventListener('click', function() {
+  if (!navigator.geolocation) {
+    showToast('Trình duyệt của bạn không hỗ trợ định vị GPS.');
+    return;
+  }
+  showToast('Đang xác định vị trí của bạn...');
+  navigator.geolocation.getCurrentPosition(pos => {
+    const userCoords = [pos.coords.latitude, pos.coords.longitude];
+    if (userLocationMarker) map.removeLayer(userLocationMarker);
+    
+    userLocationMarker = L.circleMarker(userCoords, {
+      radius: 9, color: '#ffffff', weight: 3, fillColor: '#2563eb', fillOpacity: 1
+    }).addTo(map).bindPopup('<b>📍 Vị trí hiện tại của bạn</b>').openPopup();
+    
+    map.flyTo(userCoords, 16);
+  }, () => {
+    showToast('Không thể lấy vị trí. Vui lòng bật GPS và cấp quyền cho trình duyệt.');
+  });
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toastMsg');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2800);
+}
+
+function renderPosts() {
+  const container = document.getElementById('postsContainer');
+  let html = '';
+  for (let i = postsData.length - 1; i >= 0; i--) {
+    const p = postsData[i];
+    let tagClass = p.status === 'Ùn tắc' ? 'red' : (p.status === 'Đông phương tiện' ? 'yellow' : 'green');
+    let likeText = p.liked ? '♥ Đã thích' : '♡ Thích';
+    html += `
+      <article class="post">
+        <div class="posthead">
+          <b>📍 ${escHtml(p.route)}</b>
+          <span class="tag ${tagClass}">${escHtml(p.status)}</span>
+        </div>
+        <p>${escHtml(p.detail)}</p>
+        <div class="meta">Đăng bởi: ${escHtml(p.author)} · Lúc ${escHtml(p.time)}</div>
+        <div class="actions">
+          <button type="button" data-like-idx="${i}">${likeText}</button>
+          <button type="button" data-view-lat="${p.coords[0]}" data-view-lng="${p.coords[1]}">🛰️ Xem bản đồ</button>
+        </div>
+      </article>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+function escHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function initMap() {
+  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri'
+  });
+
+  const labelsLayer = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    pane: 'shadowPane'
+  });
+
+  map = L.map('realMap', {
+    center: uthCenter,
+    zoom: 16,
+    layers: [satelliteLayer, labelsLayer],
+    tap: true
+  });
+
+  // Đánh dấu tòa nhà trường UTH
+  const uthIcon = L.divIcon({
+    html: '<div style="background:#123b63;color:white;border:2px solid white;border-radius:8px;padding:3px 7px;font-weight:bold;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.4);white-space:nowrap">🏫 UTH Bình Thạnh</div>',
+    className: '',
+    iconSize: [110, 26],
+    iconAnchor: [55, 34]
+  });
+
+  L.marker([10.80435, 106.71665], { icon: uthIcon }).addTo(map)
+    .bindPopup('<b>Trường ĐH Giao thông Vận tải TP.HCM (UTH)</b><br>Số 2 Võ Oanh, P.25, Q. Bình Thạnh');
+
+  // Vòng tròn cảnh báo khu vực quanh trường bán kính 500m
+  L.circle(uthCenter, {
+    radius: 500, color: '#f59e0b', weight: 2, dashArray: '5, 5', fillColor: '#fbbf24', fillOpacity: 0.12
+  }).addTo(map).bindPopup('<b>Vùng giám sát trọng điểm quanh cổng trường UTH (Bán kính 500m)</b>');
+
+  markersLayer = L.layerGroup().addTo(map);
+  updateMapMarkers();
+}
+
+function updateMapMarkers() {
+  if (!markersLayer) return;
+  markersLayer.clearLayers();
+
+  postsData.forEach(p => {
+    if (currentFilter !== 'ALL' && p.status !== currentFilter) return;
+
+    if (p.coords) {
+      let colorHex = p.status === 'Ùn tắc' ? '#d84b4b' : (p.status === 'Đông phương tiện' ? '#e7a629' : '#20a477');
+      let emoji = p.status === 'Ùn tắc' ? '🚨' : (p.status === 'Đông phương tiện' ? '⚠️' : '✅');
+      
+      const customPin = L.divIcon({
+        html: `<div style="background:${colorHex};color:white;border:2.5px solid white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 8px rgba(0,0,0,0.45)">${emoji}</div>`,
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+
+      let marker = L.marker(p.coords, { icon: customPin });
+      marker.bindPopup(`
+        <div style="min-width:190px">
+          <b style="font-size:14px;color:#123b63">${escHtml(p.route)}</b><br>
+          <span style="display:inline-block;margin:4px 0;padding:2px 8px;border-radius:10px;background:${colorHex};color:white;font-size:11px;font-weight:bold">${escHtml(p.status)}</span><br>
+          <p style="margin:6px 0;font-size:12px;color:#334155;line-height:1.4">${escHtml(p.detail)}</p>
+          <small style="color:#64748b">Bởi: ${escHtml(p.author)} (${escHtml(p.time)})</small>
+        </div>
+      `);
+      markersLayer.addLayer(marker);
+    }
+  });
+}
+
+function initPickerMap() {
+  const pickerSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+  pickerMap = L.map('pickerMap', {
+    center: uthCenter,
+    zoom: 16,
+    layers: [pickerSatellite],
+    tap: true
+  });
+
+  pickerMarker = L.marker(uthCenter, { draggable: true }).addTo(pickerMap);
+
+  function updateCoordsInput(latlng) {
+    const lat = latlng.lat.toFixed(5);
+    const lng = latlng.lng.toFixed(5);
+    document.getElementById('inpLat').value = lat;
+    document.getElementById('inpLng').value = lng;
+    document.getElementById('coordsDisplay').textContent = `Tọa độ: ${lat}, ${lng}`;
+  }
+
+  pickerMap.on('click', function(e) {
+    pickerMarker.setLatLng(e.latlng);
+    updateCoordsInput(e.latlng);
+  });
+
+  pickerMarker.on('dragend', function() {
+    updateCoordsInput(pickerMarker.getLatLng());
+  });
+}
+
+document.getElementById('trafficForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const route = document.getElementById('inpRoute').value;
+  const status = document.getElementById('inpStatus').value;
+  const detail = document.getElementById('inpDetail').value;
+  const lat = parseFloat(document.getElementById('inpLat').value);
+  const lng = parseFloat(document.getElementById('inpLng').value);
+
+  const newPost = {
+    route, status, detail, 
+    time: 'Vừa xong', 
+    author: 'Bạn (Sinh viên UTH)',
+    coords: [lat, lng],
+    liked: false
+  };
+
+  postsData.push(newPost);
+  document.getElementById('postCount').textContent = String(postsData.length).padStart(2, '0');
+  document.querySelector('.filter-btn[data-filter="ALL"]').textContent = `Tất cả (${String(postsData.length).padStart(2, '0')})`;
+  
+  updateMapMarkers();
+  this.reset();
+  showToast('Đã ghim điểm cảnh báo mới lên bản đồ!');
+  showPage('map');
+  setTimeout(() => {
+    if (map) map.flyTo([lat, lng], 17);
+  }, 250);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  initPickerMap();
+  renderPosts();
+});
+</script>
+
+</body>
+</html>
